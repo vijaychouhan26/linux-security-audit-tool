@@ -447,4 +447,94 @@ def register_routes(app):
                 "timestamp": datetime.now().isoformat()
             }), 500
     
+    @app.route('/api/scans/<scan_id>/pdf', methods=['GET'])
+    def generate_pdf_report(scan_id):
+        """
+        Generate and download a PDF report for a completed scan.
+        
+        Returns:
+            PDF file download or JSON error
+        """
+        try:
+            from src.utils.pdf_generator import PDFReportGenerator
+            
+            # Get scan results
+            results = scan_service.get_job_result(scan_id)
+            
+            if not results:
+                # Check file system for completed scan
+                from src.utils.file_handler import FileHandler
+                file_handler = FileHandler(settings.SCANS_DIR)
+                
+                # Look for scan in completed directory
+                scans = file_handler.get_scan_list("completed")
+                for scan in scans:
+                    if scan.get('scan_id') == scan_id:
+                        # Found in file system, load full results
+                        scan_dir = Path(scan.get('directory', ''))
+                        if scan_dir.exists():
+                            # Load metadata
+                            metadata_file = scan_dir / "metadata.json"
+                            if metadata_file.exists():
+                                import json
+                                with open(metadata_file, 'r') as f:
+                                    metadata = json.load(f)
+                                
+                                # Load raw output
+                                output_file = scan_dir / "lynis_raw_output.txt"
+                                if output_file.exists():
+                                    with open(output_file, 'r') as f:
+                                        raw_output = f.read()
+                                    
+                                    # Parse Lynis output for structured data
+                                    parser = LynisParser()
+                                    parsed_data = parser.parse(raw_output)
+                                    formatted_data = parser.format_for_display(parsed_data)
+                                    
+                                    # Create results structure
+                                    results = {
+                                        "scan_id": scan_id,
+                                        "status": "completed",
+                                        "from_history": True,
+                                        "metadata": metadata,
+                                        "parsed_results": formatted_data,
+                                        "completed_at": metadata.get('completed_at'),
+                                        "timestamp": metadata.get('timestamp')
+                                    }
+                                    break
+            
+            if not results:
+                return jsonify({
+                    "error": "Not Found",
+                    "message": f"Scan '{scan_id}' not found or not completed.",
+                    "timestamp": datetime.now().isoformat()
+                }), 404
+            
+            # Generate PDF
+            generator = PDFReportGenerator()
+            pdf_bytes = generator.generate_report(results)
+            
+            # Create response with PDF
+            from flask import Response
+            response = Response(pdf_bytes, mimetype='application/pdf')
+            response.headers['Content-Disposition'] = f'attachment; filename=security_audit_{scan_id}.pdf'
+            response.headers['Content-Type'] = 'application/pdf'
+            
+            return response
+            
+        except ImportError as e:
+            logger.error(f"PDF generation library not available: {e}")
+            return jsonify({
+                "error": "Service Unavailable",
+                "message": "PDF generation is not available. Please install reportlab: pip install reportlab",
+                "timestamp": datetime.now().isoformat()
+            }), 503
+        except Exception as e:
+            logger.error(f"Error generating PDF for scan {scan_id}: {e}")
+            return jsonify({
+                "error": "Internal Server Error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }), 500
+    
     logger.info("API routes registered successfully")
