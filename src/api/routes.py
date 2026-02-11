@@ -199,6 +199,12 @@ def register_routes(app):
                                     parsed_data = parser.parse(raw_output)
                                     formatted_data = parser.format_for_display(parsed_data)
                                     
+                                    # Create preview with configured length
+                                    preview_length = parser.OUTPUT_PREVIEW_LENGTH
+                                    output_preview = parser.strip_ansi_codes(raw_output[:preview_length])
+                                    if len(raw_output) > preview_length:
+                                        output_preview += "..."
+                                    
                                     # Return combined results
                                     response = {
                                         "scan_id": scan_id,
@@ -206,7 +212,7 @@ def register_routes(app):
                                         "from_history": True,
                                         "metadata": metadata,
                                         "parsed_results": formatted_data,
-                                        "output_preview": parser.strip_ansi_codes(raw_output[:2000]) + "..." if len(raw_output) > 2000 else parser.strip_ansi_codes(raw_output),
+                                        "output_preview": output_preview,
                                         "output_size": len(raw_output),
                                         "raw_output_url": f"/api/scans/{scan_id}/raw",
                                         "completed_at": metadata.get('completed_at')
