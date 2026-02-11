@@ -47,7 +47,10 @@ class ScanDetails {
             this.renderScanDetails(scan, results);
             
             // Hide loading screen
-            document.getElementById('loadingDetails').style.display = 'none';
+            const loadingEl = document.getElementById('loadingDetails');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
             
         } catch (error) {
             console.error('Error loading scan details:', error);
@@ -252,7 +255,10 @@ class ScanDetails {
             </div>
         `;
         
-        document.getElementById('loadingDetails').style.display = 'none';
+        const loadingEl = document.getElementById('loadingDetails');
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+        }
     }
     
     renderParsedResults(parsed) {
