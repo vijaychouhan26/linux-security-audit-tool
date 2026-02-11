@@ -1,0 +1,10 @@
+{
+  "scan_id": "scan_fcd64093",
+  "status": "completed",
+  "return_code": 0,
+  "output_file": "/home/vijay/linux-security-audit-tool/scans/pending/20260202_101443_scan_fcd64093/lynis_raw_output.txt",
+  "completed_at": "2026-02-02T10:20:38.823482",
+  "stdout_length": 46896,
+  "stderr_length": 0,
+  "has_errors": false
+}

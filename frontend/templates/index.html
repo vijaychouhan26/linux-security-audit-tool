@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux Security Audit Tool - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="icon" type="image/x-icon" href="https://img.icons8.com/color/96/000000/linux.png">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Initializing Security Dashboard</h2>
+            <p>Connecting to audit service...</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Lynis<span>Audit</span></h1>
+                </div>
+                <div class="system-status">
+                    <div class="status-indicator active" id="systemStatus"></div>
+                    <span>System Online</span>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <a href="#" class="menu-item active" data-view="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="menu-item" data-view="scans">
+                    <i class="fas fa-search"></i>
+                    <span>Security Scans</span>
+                </a>
+                <a href="#" class="menu-item" data-view="history">
+                    <i class="fas fa-history"></i>
+                    <span>Scan History</span>
+                </a>
+                <a href="#" class="menu-item" data-view="reports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#" class="menu-item" data-view="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <div class="username" id="username">Security Auditor</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navigation -->
+            <header class="top-nav">
+                <div class="nav-left">
+                    <button class="nav-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="breadcrumb" id="breadcrumb">
+                        <span>Dashboard</span>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <button class="btn-icon" id="refreshBtn" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="btn-icon" id="fullscreenBtn" title="Fullscreen">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <div class="notifications">
+                        <button class="btn-icon" id="notificationsBtn">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge" id="notificationCount">0</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard View (Default) -->
+                <div id="dashboardView" class="view active">
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon primary">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalScans">0</h3>
+                                <p>Total Scans</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="completedScans">0</h3>
+                                <p>Completed</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon warning">
+                                <i class="fas fa-running"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="activeScans">0</h3>
+                                <p>Active</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card">
+                                <div class="stat-icon danger">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3 id="failedScans">0</h3>
+                                    <p>Failed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+                        </div>
+                        <div class="actions-grid">
+                            <button class="action-card" id="startQuickScan">
+                                <i class="fas fa-play-circle"></i>
+                                <span>Quick Scan</span>
+                                <small>Basic security audit</small>
+                            </button>
+                            <button class="action-card" id="startFullScan">
+                                <i class="fas fa-search-plus"></i>
+                                <span>Full Scan</span>
+                                <small>Complete system audit</small>
+                            </button>
+                            <button class="action-card" id="viewReports">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>Generate Report</span>
+                                <small>Create PDF report</small>
+                            </button>
+                            <button class="action-card" id="systemInfo">
+                                <i class="fas fa-server"></i>
+                                <span>System Info</span>
+                                <small>View system details</small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Active Scans -->
+                    <div class="section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-spinner fa-spin"></i> Active Scans</h2>
+                            <button class="btn-text" id="viewAllScans">View All</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="activeScansTable">
+                                <thead>
+                                    <tr>
+                                        <th>Scan ID</th>
+                                        <th>Status</th>
+                                        <th>Progress</th>
+                                        <th>Started</th>
+                                        <th>Duration</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeScansBody">
+                                    <!-- Active scans will be inserted here -->
+                                    <tr id="noActiveScans">
+                                        <td colspan="6" class="empty-state">
+                                            <i class="fas fa-search"></i>
+                                            <p>No active scans</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Scans -->
+                    <div class="section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-history"></i> Recent Scans</h2>
+                            <button class="btn-text" id="viewHistory">View History</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="recentScansTable">
+                                <thead>
+                                    <tr>
+                                        <th>Scan ID</th>
+                                        <th>Status</th>
+                                        <th>Completed</th>
+                                        <th>Duration</th>
+                                        <th>Findings</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentScansBody">
+                                    <!-- Recent scans will be inserted here -->
+                                    <tr id="noRecentScans">
+                                        <td colspan="6" class="empty-state">
+                                            <i class="fas fa-inbox"></i>
+                                            <p>No scan history</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scans View -->
+                <div id="scansView" class="view">
+                    <div class="view-header">
+                        <h1><i class="fas fa-search"></i> Security Scans</h1>
+                        <p>Manage and monitor security scans</p>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Scan Controls</h2>
+                            <div class="btn-group">
+                                <button class="btn-primary" id="startNewScan">
+                                    <i class="fas fa-plus"></i> New Scan
+                                </button>
+                                <button class="btn-secondary" id="refreshScans">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="data-table" id="allScansTable">
+                                <thead>
+                                    <tr>
+                                        <th>Scan ID</th>
+                                        <th>Status</th>
+                                        <th>Progress</th>
+                                        <th>Started</th>
+                                        <th>Duration</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allScansBody">
+                                    <!-- All scans will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History View -->
+                <div id="historyView" class="view">
+                    <div class="view-header">
+                        <h1><i class="fas fa-history"></i> Scan History</h1>
+                        <p>View completed security scans</p>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Completed Scans</h2>
+                            <div class="filters">
+                                <input type="text" id="historySearch" placeholder="Search scans..." class="search-input">
+                                <select id="historyFilter" class="select-input">
+                                    <option value="all">All Scans</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="data-table" id="historyTable">
+                                <thead>
+                                    <tr>
+                                        <th>Scan ID</th>
+                                        <th>Timestamp</th>
+                                        <th>Status</th>
+                                        <th>Duration</th>
+                                        <th>Findings</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody">
+                                    <!-- History will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports View -->
+                <div id="reportsView" class="view">
+                    <div class="view-header">
+                        <h1><i class="fas fa-chart-bar"></i> Reports</h1>
+                        <p>Security analysis and reports</p>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Security Overview</h2>
+                            <button class="btn-primary" id="generateReport">
+                                <i class="fas fa-file-pdf"></i> Generate PDF Report
+                            </button>
+                        </div>
+                        
+                        <div class="charts-grid">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Scan Status Distribution</h3>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="statusChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Scan Activity Timeline</h3>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="timelineChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h3>Top Security Findings</h3>
+                            <div class="findings-list" id="topFindings">
+                                <!-- Findings will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings View -->
+                <div id="settingsView" class="view">
+                    <div class="view-header">
+                        <h1><i class="fas fa-cog"></i> Settings</h1>
+                        <p>Configure the audit tool</p>
+                    </div>
+                    
+                    <div class="settings-grid">
+                        <div class="settings-card">
+                            <h3><i class="fas fa-server"></i> System Configuration</h3>
+                            <div class="form-group">
+                                <label>API Endpoint</label>
+                                <input type="text" id="apiEndpoint" value="http://localhost:5000" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>Scan Timeout (minutes)</label>
+                                <input type="number" id="scanTimeout" value="30" class="form-control">
+                            </div>
+                            <button class="btn-primary" id="saveConfig">
+                                <i class="fas fa-save"></i> Save Configuration
+                            </button>
+                        </div>
+                        
+                        <div class="settings-card">
+                            <h3><i class="fas fa-bell"></i> Notifications</h3>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="notifyOnComplete" checked>
+                                    <span>Notify when scan completes</span>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="notifyOnFail">
+                                    <span>Notify when scan fails</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-card">
+                            <h3><i class="fas fa-palette"></i> Appearance</h3>
+                            <div class="form-group">
+                                <label>Theme</label>
+                                <select id="themeSelect" class="form-control">
+                                    <option value="dark">Dark Mode</option>
+                                    <option value="light">Light Mode</option>
+                                    <option value="auto">Auto (System)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Refresh Interval (seconds)</label>
+                                <input type="number" id="refreshInterval" value="10" min="5" max="60" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-left">
+                    <span>Linux Security Audit Tool v2.0</span>
+                    <span class="separator">•</span>
+                    <span id="connectionStatus">Connecting...</span>
+                </div>
+                <div class="footer-right">
+                    <span id="currentTime">--:--:--</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="startScanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-search"></i> Start New Security Scan</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="scan-options">
+                    <div class="scan-option active" data-type="quick">
+                        <i class="fas fa-bolt"></i>
+                        <h3>Quick Scan</h3>
+                        <p>Basic security audit (2-5 minutes)</p>
+                        <ul>
+                            <li>System information</li>
+                            <li>Basic security checks</li>
+                            <li>Common vulnerabilities</li>
+                        </ul>
+                    </div>
+                    <div class="scan-option" data-type="full">
+                        <i class="fas fa-search-plus"></i>
+                        <h3>Full Scan</h3>
+                        <p>Complete system audit (5-10 minutes)</p>
+                        <ul>
+                            <li>Comprehensive security audit</li>
+                            <li>All Lynis tests</li>
+                            <li>Detailed reporting</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="scanDescription">Scan Description (Optional)</label>
+                    <input type="text" id="scanDescription" placeholder="e.g., Weekly security audit" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary modal-close">Cancel</button>
+                <button class="btn-primary" id="confirmStartScan">Start Scan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scanDetailsModal" class="modal">
+        <div class="modal-content wide">
+            <div class="modal-header">
+                <h2><i class="fas fa-info-circle"></i> Scan Details</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="scanDetailsContent">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

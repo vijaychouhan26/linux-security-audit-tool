@@ -1,0 +1,10 @@
+# Linux Security Audit Tool - Phase 2
+# Core dependencies
+
+# Web framework
+Flask>=2.3.0
+flask-cors>=4.0.0
+Werkzeug>=2.3.0
+
+# Development/testing (optional)
+pytest>=7.0.0
