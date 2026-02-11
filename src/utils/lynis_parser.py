@@ -6,6 +6,7 @@ Parses raw Lynis output into structured, human-readable data for dashboard displ
 
 import re
 from typing import Dict, List, Any, Optional
+from src.utils.severity_classifier import SeverityClassifier
 
 
 class LynisParser:
@@ -20,6 +21,7 @@ class LynisParser:
     def __init__(self):
         """Initialize the parser."""
         self.ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+        self.severity_classifier = SeverityClassifier()
     
     def strip_ansi_codes(self, text: str) -> str:
         """
@@ -216,6 +218,19 @@ class LynisParser:
         warnings = parsed_data.get('warnings', [])
         suggestions = parsed_data.get('suggestions', [])
         
+        # Classify warnings and suggestions with severity
+        self.severity_classifier.reset_statistics()
+        all_findings = warnings + suggestions
+        classified_findings = self.severity_classifier.classify_findings(all_findings)
+        
+        # Separate by severity
+        critical_findings = [f for f in classified_findings if f.get('severity') == 'critical']
+        high_findings = [f for f in classified_findings if f.get('severity') == 'high']
+        medium_findings = [f for f in classified_findings if f.get('severity') == 'medium']
+        low_findings = [f for f in classified_findings if f.get('severity') == 'low']
+        
+        severity_stats = self.severity_classifier.get_statistics()
+        
         return {
             'score': {
                 'hardening_index': summary.get('hardening_index', 0),
@@ -228,9 +243,16 @@ class LynisParser:
                 'suggestions_count': len(suggestions),
                 'plugins_enabled': summary.get('plugins_enabled', 0)
             },
+            'severity_summary': severity_stats,
+            'risk_summary': self.severity_classifier.get_summary(),
             'system_info': parsed_data.get('system_info', {}),
             'security_components': parsed_data.get('security_components', {}),
             'findings': {
+                'all': classified_findings[:50],  # Limit to 50 total
+                'critical': critical_findings[:10],
+                'high': high_findings[:20],
+                'medium': medium_findings[:30],
+                'low': low_findings[:30],
                 'warnings': warnings[:self.MAX_WARNINGS_DISPLAY],
                 'suggestions': suggestions[:self.MAX_SUGGESTIONS_DISPLAY],
             }
