@@ -11,6 +11,12 @@ from typing import Dict, List, Any, Optional
 class LynisParser:
     """Parse Lynis security audit output into structured data."""
     
+    # Configuration constants
+    MAX_SUGGESTION_DETAILS = 3  # Maximum detail lines per suggestion
+    MAX_WARNINGS_DISPLAY = 10  # Maximum warnings to return
+    MAX_SUGGESTIONS_DISPLAY = 20  # Maximum suggestions to return
+    OUTPUT_PREVIEW_LENGTH = 2000  # Characters for output preview
+    
     def __init__(self):
         """Initialize the parser."""
         self.ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
@@ -125,7 +131,7 @@ class LynisParser:
                     details_text = match.group(3).strip()
                     # Extract Related resources or Details
                     detail_lines = [line.strip() for line in details_text.split('\n') if line.strip()]
-                    suggestion['details'] = detail_lines[:3]  # Limit to first 3 lines
+                    suggestion['details'] = detail_lines[:self.MAX_SUGGESTION_DETAILS]
                 
                 suggestions.append(suggestion)
         
@@ -225,8 +231,8 @@ class LynisParser:
             'system_info': parsed_data.get('system_info', {}),
             'security_components': parsed_data.get('security_components', {}),
             'findings': {
-                'warnings': warnings[:10],  # Limit to first 10
-                'suggestions': suggestions[:20],  # Limit to first 20
+                'warnings': warnings[:self.MAX_WARNINGS_DISPLAY],
+                'suggestions': suggestions[:self.MAX_SUGGESTIONS_DISPLAY],
             }
         }
     
