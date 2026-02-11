@@ -6,42 +6,37 @@ This project focuses on auditing Linux systems for security misconfigurations an
 Linux systems are widely used in servers and cloud environments, but many are deployed with insecure default configurations. This project uses Lynis as the core audit engine and builds a structured system around it to make audit results more understandable and actionable.
 
 ## Features
-- Local Linux system security audit
-- Uses Lynis as the audit engine
-- Stores audit results for review
-- Learning-oriented and human-readable design
-- Extensible architecture for future enhancements
+- **Local Linux system security audit** using Lynis
+- **Human-readable dashboard** with severity indicators (Critical, High, Medium, Low)
+- **Automated severity classification** of security findings
+- **PDF report generation** with professional formatting for non-technical users
+- **RESTful API** for programmatic access
+- **Real-time scan monitoring** and progress tracking
+- **Scan history** with persistent storage
+- **Interactive web dashboard** with dark mode
+
+## New Features (Latest Update)
+✨ **Human-Readable Output**: Scan results are now categorized by severity (Critical, High, Medium, Low) for easy understanding
+
+✨ **PDF Report Downloads**: Generate professional PDF reports with human-readable summaries instead of raw Lynis output
+
+✨ **Severity Dashboard**: Visual indicators show the impact level of security findings at a glance
+
+✨ **Risk Assessment**: Automatic risk classification helps prioritize remediation efforts
 
 ## Technologies Used
-- Python
-- Lynis
-- Linux
+- Python 3.8+
+- Lynis (security audit engine)
+- Flask (REST API)
+- ReportLab (PDF generation)
+- HTML/CSS/JavaScript (Web Dashboard)
 
-## Current Scope
+## Current Features
 - Local system auditing
-- Raw audit output collection
-- Basic processing and storage
-
-## Future Scope
-- Human-readable reports
-- Severity classification
-- Remote system auditing
-- Compliance checks
-
-## Disclaimer
-This tool is intended for educational and auditing purposes only.
-# Linux Security Audit Tool - Phase 1
-
-A professional, structured Linux security auditing tool using Lynis for local system scans.
-
-## Phase 1: Core Scanner Implementation
-
-This phase implements a reliable, well-structured command-line tool that:
-- Runs Lynis audits on the local system
-- Handles sudo privileges correctly
-- Saves timestamped scan results
-- Provides clear terminal feedback
-- Prevents silent failures
+- Severity classification (Critical/High/Medium/Low)
+- Human-readable reports and PDF exports
+- Web-based dashboard with real-time updates
+- Persistent scan history
 
 ## Prerequisites
 
@@ -56,21 +51,59 @@ This phase implements a reliable, well-structured command-line tool that:
 # Clone or copy the project
 cd linux-security-audit-tool
 
-# No pip install required for Phase 1 (pure Python)
-# Just ensure you have Python 3.8+
-python3 --version
-# Linux Security Audit Tool - Phase 2
+# Install Python dependencies
+pip install -r requirements.txt
 
-A professional, structured Linux security auditing tool with REST API.
+# Ensure Lynis is installed
+sudo apt install lynis -y  # Ubuntu/Debian
+# or
+sudo yum install lynis -y  # RHEL/CentOS
+```
 
-## Phase 2: API Layer with Background Processing
+## Usage
 
-This phase adds a clean Flask API with background execution:
-- RESTful JSON API for scan management
-- Background scan execution (non-blocking)
-- Scan status tracking and progress updates
-- Comprehensive error handling
-- Scan history management
+### Starting the Dashboard
+
+```bash
+# Start the API server (Terminal 1)
+python3 run_api.py
+
+# Start the dashboard (Terminal 2)
+python3 frontend/dashboard.py
+
+# Access the dashboard
+# Open browser to http://localhost:8080
+```
+
+### Running a Security Scan
+
+**Via Dashboard:**
+1. Open http://localhost:8080 in your browser
+2. Click "Quick Scan" or "Full Scan"
+3. View results with severity indicators
+4. Download PDF report
+
+**Via API:**
+```bash
+# Start a scan
+curl -X POST http://localhost:5000/api/scans
+
+# Check scan status
+curl http://localhost:5000/api/scans/<scan_id>
+
+# Get results
+curl http://localhost:5000/api/scans/<scan_id>/results
+
+# Download PDF report
+curl http://localhost:5000/api/scans/<scan_id>/pdf -o report.pdf
+```
+
+### Understanding Severity Levels
+
+- **CRITICAL** 🔴: Immediate action required (e.g., root password issues, disabled security modules)
+- **HIGH** 🟠: Should be addressed soon (e.g., firewall disabled, weak encryption)
+- **MEDIUM** 🟡: Plan for remediation (e.g., configuration improvements, missing updates)
+- **LOW** 🔵: Best practice recommendations (e.g., optional optimizations)
 
 ## API Endpoints
 
@@ -78,8 +111,9 @@ This phase adds a clean Flask API with background execution:
 - `POST /api/scans` - Start a new scan
 - `GET /api/scans` - List all scans/jobs
 - `GET /api/scans/<scan_id>` - Get scan status
-- `GET /api/scans/<scan_id>/results` - Get scan results
+- `GET /api/scans/<scan_id>/results` - Get scan results with severity classification
 - `GET /api/scans/<scan_id>/raw` - Get raw Lynis output
+- `GET /api/scans/<scan_id>/pdf` - Download PDF report (**NEW**)
 - `DELETE /api/scans/<scan_id>` - Cancel a running scan
 
 ### System Information
@@ -87,12 +121,3 @@ This phase adds a clean Flask API with background execution:
 - `GET /api/system/status` - Get system and service status
 - `GET /health` - Health check endpoint
 - `GET /api` - API documentation
-
-## Installation for Phase 2
-
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Ensure Lynis is installed
-sudo apt install lynis -y
