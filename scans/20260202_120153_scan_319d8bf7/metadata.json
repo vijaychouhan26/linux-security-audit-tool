@@ -1,0 +1,7 @@
+{
+  "scan_id": "scan_319d8bf7",
+  "timestamp": "2026-02-02T12:04:33.496127",
+  "return_code": 0,
+  "output_file": "scans/20260202_120153_scan_319d8bf7/lynis_output.txt",
+  "command": "sudo lynis audit system --quick"
+}

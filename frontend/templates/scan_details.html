@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Details - Linux Security Audit Tool</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+</head>
+<body>
+    <div class="container">
+        <main class="main-content" style="margin-left: 0;">
+            <header class="top-nav">
+                <div class="nav-left">
+                    <a href="/" class="btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+                <div class="nav-right">
+                    <span id="currentTime">--:--:--</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="view-header">
+                    <h1><i class="fas fa-info-circle"></i> Scan Details</h1>
+                    <p>Detailed information for scan: <span id="scanIdPlaceholder">{{ scan_id }}</span></p>
+                </div>
+
+                <div id="scanDetailsContent">
+                    <div class="loading-screen" id="loadingDetails">
+                        <div class="loading-content">
+                            <div class="loading-spinner"></div>
+                            <h2>Loading Scan Details</h2>
+                            <p>Please wait...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/scan_details.js"></script>
+    <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const timeElement = document.getElementById('currentTime');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+        
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>

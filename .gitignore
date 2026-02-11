@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.env
+
+# Logs
+*.log
+logs/
+
+# Generated reports
+backend/generated/
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Lynis raw data (optional – keep only if you want)
+backend/data/*.dat
+scans/*/lynis_output.txt
+
+# Pytest cache
+.pytest_cache/
