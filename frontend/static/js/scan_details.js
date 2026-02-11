@@ -58,15 +58,23 @@ class ScanDetails {
     renderScanDetails(scan, results = null) {
         const content = document.getElementById('scanDetailsContent');
         
+        // Build findings HTML with parsed data
         let findingsHtml = '';
+        let parsedResultsHtml = '';
+        
+        if (results && results.parsed_results) {
+            // Display parsed security results
+            parsedResultsHtml = this.renderParsedResults(results.parsed_results);
+        }
+        
         if (results && results.output_preview) {
             findingsHtml = `
                 <div class="section">
                     <div class="section-header">
-                        <h2><i class="fas fa-file-alt"></i> Output Preview</h2>
+                        <h2><i class="fas fa-file-alt"></i> Raw Output Preview</h2>
                     </div>
                     <div class="table-container">
-                        <pre style="padding: 20px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; overflow: auto; max-height: 500px;">${results.output_preview}</pre>
+                        <pre style="padding: 20px; background: var(--color-bg-secondary); border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; overflow: auto; max-height: 500px; white-space: pre-wrap; word-wrap: break-word;">${this.escapeHtml(results.output_preview)}</pre>
                     </div>
                 </div>
             `;
@@ -169,6 +177,8 @@ class ScanDetails {
                 </div>
             </div>
             
+            ${parsedResultsHtml}
+            
             ${findingsHtml}
             
             <div class="section">
@@ -243,6 +253,209 @@ class ScanDetails {
         `;
         
         document.getElementById('loadingDetails').style.display = 'none';
+    }
+    
+    renderParsedResults(parsed) {
+        if (!parsed) return '';
+        
+        const score = parsed.score || {};
+        const stats = parsed.statistics || {};
+        const systemInfo = parsed.system_info || {};
+        const securityComponents = parsed.security_components || {};
+        const findings = parsed.findings || {};
+        
+        // Get status color for hardening score
+        const scoreStatus = score.status || 'poor';
+        const scoreColor = this.getScoreColor(scoreStatus);
+        
+        return `
+            <!-- Security Score -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-shield-alt"></i> Security Score</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card" style="grid-column: span 2;">
+                        <div class="stat-icon ${scoreColor}">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 style="font-size: 2em;">${score.hardening_index || 0}/100</h3>
+                            <p>Hardening Index</p>
+                            <div style="margin-top: 10px; background: var(--color-bg-secondary); border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div style="width: ${score.hardening_index || 0}%; height: 100%; background: linear-gradient(90deg, var(--color-${scoreColor}), var(--color-${scoreColor}-light)); transition: width 0.3s ease;"></div>
+                            </div>
+                            <small style="margin-top: 5px; display: block; text-transform: uppercase; color: var(--color-${scoreColor});">${scoreStatus}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon primary">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${stats.tests_performed || 0}</h3>
+                            <p>Tests Performed</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon ${stats.warnings_count > 0 ? 'danger' : 'success'}">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${stats.warnings_count || 0}</h3>
+                            <p>Warnings</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon info">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${stats.suggestions_count || 0}</h3>
+                            <p>Suggestions</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon success">
+                            <i class="fas fa-plug"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${stats.plugins_enabled || 0}</h3>
+                            <p>Plugins Enabled</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Information -->
+            ${systemInfo.os_name ? `
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-server"></i> System Information</h2>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <tbody>
+                            ${systemInfo.os_name ? `<tr><td style="width: 200px; color: var(--color-text-secondary);">Operating System:</td><td>${this.escapeHtml(systemInfo.os_name)}</td></tr>` : ''}
+                            ${systemInfo.os_version ? `<tr><td style="color: var(--color-text-secondary);">OS Version:</td><td>${this.escapeHtml(systemInfo.os_version)}</td></tr>` : ''}
+                            ${systemInfo.kernel_version ? `<tr><td style="color: var(--color-text-secondary);">Kernel Version:</td><td>${this.escapeHtml(systemInfo.kernel_version)}</td></tr>` : ''}
+                            ${systemInfo.hostname ? `<tr><td style="color: var(--color-text-secondary);">Hostname:</td><td>${this.escapeHtml(systemInfo.hostname)}</td></tr>` : ''}
+                            ${systemInfo.hardware_platform ? `<tr><td style="color: var(--color-text-secondary);">Hardware Platform:</td><td>${this.escapeHtml(systemInfo.hardware_platform)}</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            ` : ''}
+            
+            <!-- Security Components -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-shield-virus"></i> Security Components</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon ${securityComponents.firewall ? 'success' : 'danger'}">
+                            <i class="fas fa-${securityComponents.firewall ? 'check-circle' : 'times-circle'}"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${securityComponents.firewall ? 'Installed' : 'Not Installed'}</h3>
+                            <p>Firewall</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon ${securityComponents.intrusion_software ? 'success' : 'danger'}">
+                            <i class="fas fa-${securityComponents.intrusion_software ? 'check-circle' : 'times-circle'}"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${securityComponents.intrusion_software ? 'Installed' : 'Not Installed'}</h3>
+                            <p>Intrusion Detection</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon ${securityComponents.malware_scanner ? 'success' : 'danger'}">
+                            <i class="fas fa-${securityComponents.malware_scanner ? 'check-circle' : 'times-circle'}"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>${securityComponents.malware_scanner ? 'Installed' : 'Not Installed'}</h3>
+                            <p>Malware Scanner</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Warnings -->
+            ${findings.warnings && findings.warnings.length > 0 ? `
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Warnings (${findings.warnings.length})</h2>
+                </div>
+                <div class="table-container">
+                    ${findings.warnings.map(warning => `
+                        <div style="padding: 15px; margin-bottom: 10px; background: var(--color-bg-secondary); border-left: 4px solid var(--color-danger); border-radius: 4px;">
+                            <div style="display: flex; align-items: start;">
+                                <i class="fas fa-exclamation-circle" style="color: var(--color-danger); margin-right: 12px; margin-top: 3px;"></i>
+                                <div style="flex: 1;">
+                                    <p style="margin: 0; color: var(--color-text-primary);">${this.escapeHtml(warning.message)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            <!-- Suggestions -->
+            ${findings.suggestions && findings.suggestions.length > 0 ? `
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-lightbulb"></i> Security Suggestions (${findings.suggestions.length})</h2>
+                </div>
+                <div class="table-container">
+                    ${findings.suggestions.map(suggestion => `
+                        <div style="padding: 15px; margin-bottom: 10px; background: var(--color-bg-secondary); border-left: 4px solid var(--color-info); border-radius: 4px;">
+                            <div style="display: flex; align-items: start; justify-content: space-between;">
+                                <div style="display: flex; align-items: start; flex: 1;">
+                                    <i class="fas fa-lightbulb" style="color: var(--color-info); margin-right: 12px; margin-top: 3px;"></i>
+                                    <div style="flex: 1;">
+                                        <p style="margin: 0 0 5px 0; color: var(--color-text-primary); font-weight: 500;">${this.escapeHtml(suggestion.message)}</p>
+                                        ${suggestion.details && suggestion.details.length > 0 ? `
+                                            <ul style="margin: 8px 0 0 0; padding-left: 20px; color: var(--color-text-secondary); font-size: 0.9em;">
+                                                ${suggestion.details.map(detail => `<li>${this.escapeHtml(detail)}</li>`).join('')}
+                                            </ul>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <span style="background: var(--color-bg-tertiary); padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-family: monospace; white-space: nowrap; margin-left: 10px;">${this.escapeHtml(suggestion.test_id)}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+        `;
+    }
+    
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    getScoreColor(status) {
+        switch (status) {
+            case 'excellent': return 'success';
+            case 'good': return 'primary';
+            case 'fair': return 'warning';
+            case 'poor': return 'danger';
+            default: return 'primary';
+        }
     }
     
     // Utility functions
