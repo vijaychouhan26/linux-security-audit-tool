@@ -395,6 +395,9 @@ class SecurityDashboard {
                     <button class="btn-icon" onclick="dashboard.viewScanResults('${scan.scan_id}')" title="View Results">
                         <i class="fas fa-chart-bar"></i>
                     </button>
+                    <button class="btn-icon" onclick="dashboard.downloadPDFReport('${scan.scan_id}')" title="Download PDF Report">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
                     <button class="btn-icon" onclick="dashboard.downloadRawOutput('${scan.scan_id}')" title="Download Raw Output">
                         <i class="fas fa-download"></i>
                     </button>
@@ -440,6 +443,9 @@ class SecurityDashboard {
                     </button>
                     <button class="btn-icon" onclick="dashboard.viewScanResults('${scan.scan_id}')" title="View Results">
                         <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <button class="btn-icon" onclick="dashboard.downloadPDFReport('${scan.scan_id}')" title="Download PDF Report">
+                        <i class="fas fa-file-pdf"></i>
                     </button>
                     <button class="btn-icon" onclick="dashboard.downloadRawOutput('${scan.scan_id}')" title="Download Raw Output">
                         <i class="fas fa-download"></i>
@@ -671,6 +677,95 @@ class SecurityDashboard {
         const modal = document.getElementById('scanDetailsModal');
         const content = document.getElementById('scanDetailsContent');
         
+        const parsedResults = results.parsed_results || {};
+        const score = parsedResults.score || {};
+        const severitySummary = parsedResults.severity_summary || {};
+        const findings = parsedResults.findings || {};
+        
+        // Create severity badges HTML
+        let severityBadgesHtml = '';
+        if (Object.keys(severitySummary).length > 0) {
+            severityBadgesHtml = `
+                <div class="detail-section">
+                    <h3>Security Findings by Severity</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+                        ${severitySummary.critical > 0 ? `
+                        <div style="background: #FEE2E2; border: 2px solid #DC2626; border-radius: 8px; padding: 15px; min-width: 120px;">
+                            <div style="color: #DC2626; font-size: 24px; font-weight: bold;">${severitySummary.critical}</div>
+                            <div style="color: #DC2626; font-weight: 600;">CRITICAL</div>
+                        </div>
+                        ` : ''}
+                        ${severitySummary.high > 0 ? `
+                        <div style="background: #FED7AA; border: 2px solid #EA580C; border-radius: 8px; padding: 15px; min-width: 120px;">
+                            <div style="color: #EA580C; font-size: 24px; font-weight: bold;">${severitySummary.high}</div>
+                            <div style="color: #EA580C; font-weight: 600;">HIGH</div>
+                        </div>
+                        ` : ''}
+                        ${severitySummary.medium > 0 ? `
+                        <div style="background: #FEF3C7; border: 2px solid #D97706; border-radius: 8px; padding: 15px; min-width: 120px;">
+                            <div style="color: #D97706; font-size: 24px; font-weight: bold;">${severitySummary.medium}</div>
+                            <div style="color: #D97706; font-weight: 600;">MEDIUM</div>
+                        </div>
+                        ` : ''}
+                        ${severitySummary.low > 0 ? `
+                        <div style="background: #CFFAFE; border: 2px solid #0891B2; border-radius: 8px; padding: 15px; min-width: 120px;">
+                            <div style="color: #0891B2; font-size: 24px; font-weight: bold;">${severitySummary.low}</div>
+                            <div style="color: #0891B2; font-weight: 600;">LOW</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Create findings list HTML
+        let findingsHtml = '';
+        const criticalFindings = findings.critical || [];
+        const highFindings = findings.high || [];
+        const mediumFindings = findings.medium || [];
+        
+        if (criticalFindings.length > 0 || highFindings.length > 0 || mediumFindings.length > 0) {
+            findingsHtml = '<div class="detail-section"><h3>Top Priority Findings</h3>';
+            
+            // Show critical findings
+            criticalFindings.slice(0, 5).forEach((finding, idx) => {
+                findingsHtml += `
+                    <div style="background: #FEE2E2; border-left: 4px solid #DC2626; padding: 12px; margin: 10px 0; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: #DC2626; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">CRITICAL</span>
+                            <span style="color: #991B1B; font-weight: 500;">${finding.message}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Show high findings
+            highFindings.slice(0, 5).forEach((finding, idx) => {
+                findingsHtml += `
+                    <div style="background: #FED7AA; border-left: 4px solid #EA580C; padding: 12px; margin: 10px 0; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: #EA580C; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">HIGH</span>
+                            <span style="color: #9A3412; font-weight: 500;">${finding.message}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Show medium findings
+            mediumFindings.slice(0, 3).forEach((finding, idx) => {
+                findingsHtml += `
+                    <div style="background: #FEF3C7; border-left: 4px solid #D97706; padding: 12px; margin: 10px 0; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: #D97706; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">MEDIUM</span>
+                            <span style="color: #78350F; font-weight: 500;">${finding.message}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            findingsHtml += '</div>';
+        }
+        
         content.innerHTML = `
             <div class="scan-details">
                 <div class="detail-section">
@@ -683,22 +778,30 @@ class SecurityDashboard {
                         <div class="detail-label">Status:</div>
                         <div class="detail-value"><span class="status-badge completed">completed</span></div>
                     </div>
+                    ${score.hardening_index ? `
+                    <div class="detail-row">
+                        <div class="detail-label">Security Score:</div>
+                        <div class="detail-value"><strong>${score.hardening_index}/100</strong> (${score.status})</div>
+                    </div>
+                    ` : ''}
                     <div class="detail-row">
                         <div class="detail-label">Output Size:</div>
                         <div class="detail-value">${this.formatBytes(results.output_size || 0)}</div>
                     </div>
                 </div>
                 
-                <div class="detail-section">
-                    <h3>Raw Output</h3>
-                    <pre style="background: var(--color-bg-lighter); padding: 15px; border-radius: var(--border-radius); overflow: auto; max-height: 400px; font-size: 12px; color: var(--color-text-secondary);">${results.output_preview || 'No output available'}</pre>
-                </div>
+                ${severityBadgesHtml}
+                
+                ${findingsHtml}
                 
                 <div class="detail-section">
                     <h3>Actions</h3>
                     <div class="btn-group">
-                        <button class="btn-primary" onclick="dashboard.downloadRawOutput('${results.scan_id}')">
-                            <i class="fas fa-download"></i> Download Full Output
+                        <button class="btn-primary" onclick="dashboard.downloadPDFReport('${results.scan_id}')">
+                            <i class="fas fa-file-pdf"></i> Download PDF Report
+                        </button>
+                        <button class="btn-secondary" onclick="dashboard.downloadRawOutput('${results.scan_id}')">
+                            <i class="fas fa-download"></i> Download Raw Output
                         </button>
                     </div>
                 </div>
@@ -930,7 +1033,29 @@ class SecurityDashboard {
     }
     
     generateReport() {
-        this.showToast('PDF report generation is not implemented in this version', 'info');
+        // Get the most recent completed scan
+        if (this.history.length === 0) {
+            this.showToast('No completed scans available for report generation', 'warning');
+            return;
+        }
+        
+        const latestScan = this.history[0];
+        this.downloadPDFReport(latestScan.scan_id);
+    }
+    
+    async downloadPDFReport(scanId) {
+        try {
+            this.showToast('Generating PDF report...', 'info');
+            
+            // Download the PDF
+            const url = `${this.apiBase}/api/scans/${scanId}/pdf`;
+            window.open(url, '_blank');
+            
+            this.showToast('PDF report generated successfully', 'success');
+        } catch (error) {
+            console.error('Error generating PDF report:', error);
+            this.showToast('Failed to generate PDF report', 'error');
+        }
     }
     
     saveConfig() {
