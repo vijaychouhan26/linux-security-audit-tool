@@ -22,6 +22,8 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+    # Define placeholder to avoid NameError
+    colors = None
 
 
 class PDFReportGenerator:
@@ -29,19 +31,19 @@ class PDFReportGenerator:
     Generate professional PDF reports from security scan results.
     """
     
-    # Color scheme for severity levels
-    SEVERITY_COLORS = {
-        'critical': colors.HexColor('#DC2626'),  # Red
-        'high': colors.HexColor('#EA580C'),      # Orange
-        'medium': colors.HexColor('#D97706'),    # Amber
-        'low': colors.HexColor('#0891B2'),       # Cyan
-        'info': colors.HexColor('#64748B'),      # Gray
-    }
-    
     def __init__(self):
         """Initialize the PDF generator"""
         if not REPORTLAB_AVAILABLE:
             raise ImportError("reportlab is not installed. Install it with: pip install reportlab")
+        
+        # Color scheme for severity levels (defined after checking reportlab availability)
+        self.SEVERITY_COLORS = {
+            'critical': colors.HexColor('#DC2626'),  # Red
+            'high': colors.HexColor('#EA580C'),      # Orange
+            'medium': colors.HexColor('#D97706'),    # Amber
+            'low': colors.HexColor('#0891B2'),       # Cyan
+            'info': colors.HexColor('#64748B'),      # Gray
+        }
         
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
