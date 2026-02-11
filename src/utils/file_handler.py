@@ -197,6 +197,8 @@ class FileHandler:
                     try:
                         with open(metadata_file, 'r') as f:
                             metadata = json.load(f)
+                        # Add directory path to metadata
+                        metadata['directory'] = str(item)
                         scans.append(metadata)
                     except (json.JSONDecodeError, IOError):
                         # Create basic metadata from directory name
