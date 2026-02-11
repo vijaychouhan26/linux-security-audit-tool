@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 
 from src.services.scan_service import scan_service
+from src.utils.lynis_parser import LynisParser
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -193,14 +194,26 @@ def register_routes(app):
                                     with open(output_file, 'r') as f:
                                         raw_output = f.read()
                                     
+                                    # Parse Lynis output for structured data
+                                    parser = LynisParser()
+                                    parsed_data = parser.parse(raw_output)
+                                    formatted_data = parser.format_for_display(parsed_data)
+                                    
+                                    # Create preview with configured length
+                                    preview_length = parser.OUTPUT_PREVIEW_LENGTH
+                                    output_preview = parser.strip_ansi_codes(raw_output[:preview_length])
+                                    if len(raw_output) > preview_length:
+                                        output_preview += "..."
+                                    
                                     # Return combined results
                                     response = {
                                         "scan_id": scan_id,
                                         "status": "completed",
                                         "from_history": True,
                                         "metadata": metadata,
-                                        "raw_output_preview": raw_output[:1000] + "..." if len(raw_output) > 1000 else raw_output,
-                                        "raw_output_size": len(raw_output),
+                                        "parsed_results": formatted_data,
+                                        "output_preview": output_preview,
+                                        "output_size": len(raw_output),
                                         "raw_output_url": f"/api/scans/{scan_id}/raw",
                                         "completed_at": metadata.get('completed_at')
                                     }
