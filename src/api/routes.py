@@ -5,6 +5,7 @@ API routes for Linux Security Audit Tool.
 from flask import jsonify, request, send_file
 from pathlib import Path
 import logging
+import sys
 from datetime import datetime
 
 from src.services.scan_service import scan_service
@@ -220,6 +221,7 @@ def register_routes(app):
                                     return jsonify(response), 200
             
             if results:
+                results = _enrich_results_with_parsed_output(scan_id, results)
                 return jsonify(results), 200
             else:
                 return jsonify({
@@ -510,6 +512,8 @@ def register_routes(app):
                     "timestamp": datetime.now().isoformat()
                 }), 404
             
+            results = _enrich_results_with_parsed_output(scan_id, results)
+
             # Generate PDF
             generator = PDFReportGenerator()
             pdf_bytes = generator.generate_report(results)
@@ -536,5 +540,47 @@ def register_routes(app):
                 "message": str(e),
                 "timestamp": datetime.now().isoformat()
             }), 500
+    
+    def _enrich_results_with_parsed_output(scan_id, results):
+        """Ensure results include parsed, human-readable report data."""
+        if not results:
+            return results
+
+        if results.get("parsed_results"):
+            return results
+
+        output_file = results.get("output_file")
+        if not output_file:
+            return results
+
+        output_path = Path(output_file)
+        if not output_path.exists():
+            return results
+
+        try:
+            with open(output_path, 'r') as f:
+                raw_output = f.read()
+
+            parser = LynisParser()
+            parsed_data = parser.parse(raw_output)
+            formatted_data = parser.format_for_display(parsed_data)
+
+            preview_length = parser.OUTPUT_PREVIEW_LENGTH
+            output_preview = parser.strip_ansi_codes(raw_output[:preview_length])
+            if len(raw_output) > preview_length:
+                output_preview += "..."
+
+            enriched = results.copy()
+            enriched.update({
+                "scan_id": scan_id,
+                "parsed_results": formatted_data,
+                "output_preview": output_preview,
+                "output_size": len(raw_output),
+                "raw_output_url": f"/api/scans/{scan_id}/raw"
+            })
+            return enriched
+        except Exception as e:
+            logger.warning(f"Could not parse output for scan {scan_id}: {e}")
+            return results
     
     logger.info("API routes registered successfully")
