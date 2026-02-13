@@ -487,7 +487,16 @@ class SecurityDashboard {
 
         try {
             const response = await fetch(`${this.apiBase}/api/scans/${latestScan.scan_id}/results`);
-            if (!response.ok) throw new Error('Failed to load findings');
+            if (!response.ok) {
+                let errorMessage = `Failed to load findings (HTTP ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (jsonError) {
+                    // Ignore JSON parse errors and use default message
+                }
+                throw new Error(errorMessage);
+            }
 
             const results = await response.json();
             const parsedResults = results.parsed_results || {};
