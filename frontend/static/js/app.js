@@ -1154,7 +1154,11 @@ class SecurityDashboard {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            window.URL.revokeObjectURL(downloadUrl);
+            
+            // Revoke the URL after a small delay to ensure download initiates
+            setTimeout(() => {
+                window.URL.revokeObjectURL(downloadUrl);
+            }, 100);
 
             this.showToast('PDF report generated successfully', 'success');
         } catch (error) {

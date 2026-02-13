@@ -31,7 +31,7 @@ def _enrich_results_with_parsed_output(scan_id, results):
         return results
 
     try:
-        with open(output_path, 'r') as f:
+        with open(output_path, 'r', encoding='utf-8') as f:
             raw_output = f.read()
 
         parser = LynisParser()
