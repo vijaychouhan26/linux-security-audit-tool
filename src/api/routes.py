@@ -20,8 +20,8 @@ def _enrich_results_with_parsed_output(scan_id, results):
     if not results:
         return results
 
-    # Use key-existence check to avoid reprocessing empty but existing parsed_results
-    if "parsed_results" in results and results["parsed_results"]:
+    # Use key-existence check with explicit None check to handle empty dicts/lists properly
+    if "parsed_results" in results and results["parsed_results"] is not None:
         return results
 
     output_file = results.get("output_file")

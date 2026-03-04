@@ -558,7 +558,12 @@ class SecurityDashboard {
             });
         } catch (error) {
             console.error('Error updating top findings:', error);
-            findingsContainer.innerHTML = '<p class="text-muted">Unable to load findings summary.</p>';
+            // Use DOM manipulation for consistency with XSS prevention
+            findingsContainer.innerHTML = '';
+            const errorPara = document.createElement('p');
+            errorPara.className = 'text-muted';
+            errorPara.textContent = 'Unable to load findings summary.';
+            findingsContainer.appendChild(errorPara);
         }
     }
 
@@ -1054,7 +1059,7 @@ class SecurityDashboard {
         
         const closeBtn = document.createElement('button');
         closeBtn.className = 'toast-close';
-        closeBtn.innerHTML = '&times;';
+        closeBtn.textContent = '×'; // Use textContent to prevent XSS
         toast.appendChild(closeBtn);
         
         container.appendChild(toast);
