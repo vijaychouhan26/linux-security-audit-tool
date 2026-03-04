@@ -1,4 +1,9 @@
 // Linux Security Audit Tool - Frontend Application
+
+// Chart configuration constants
+const SEVERITY_LABELS = ['Critical', 'High', 'Medium', 'Low'];
+const SEVERITY_COLORS = ['#DC2626', '#EA580C', '#D97706', '#0891B2'];
+
 class SecurityDashboard {
     constructor() {
         this.apiBase = 'http://localhost:5000';
@@ -582,16 +587,16 @@ class SecurityDashboard {
         // Always update chart to avoid stale data, even if no findings
         if ((totals.critical + totals.high + totals.medium + totals.low) === 0) {
             // Explicitly reset chart to a "no findings" state
-            statusChart.data.labels = ['Critical', 'High', 'Medium', 'Low'];
+            statusChart.data.labels = SEVERITY_LABELS;
             statusChart.data.datasets[0].data = [0, 0, 0, 0];
-            statusChart.data.datasets[0].backgroundColor = ['#DC2626', '#EA580C', '#D97706', '#0891B2'];
+            statusChart.data.datasets[0].backgroundColor = SEVERITY_COLORS;
             statusChart.update();
             return;
         }
 
-        statusChart.data.labels = ['Critical', 'High', 'Medium', 'Low'];
+        statusChart.data.labels = SEVERITY_LABELS;
         statusChart.data.datasets[0].data = [totals.critical, totals.high, totals.medium, totals.low];
-        statusChart.data.datasets[0].backgroundColor = ['#DC2626', '#EA580C', '#D97706', '#0891B2'];
+        statusChart.data.datasets[0].backgroundColor = SEVERITY_COLORS;
         statusChart.update();
     }
     
