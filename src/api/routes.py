@@ -5,6 +5,7 @@ API routes for Linux Security Audit Tool.
 from flask import jsonify, request, send_file
 from pathlib import Path
 import logging
+import sys
 from datetime import datetime
 
 from src.services.scan_service import scan_service
