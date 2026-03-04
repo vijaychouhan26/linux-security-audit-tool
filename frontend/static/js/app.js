@@ -1,7 +1,7 @@
 // Linux Security Audit Tool - Frontend Application
 class SecurityDashboard {
     constructor() {
-        this.apiBase = '';
+        this.apiBase = 'http://localhost:5000';
         this.scans = [];
         this.history = [];
         this.activePolling = null;
