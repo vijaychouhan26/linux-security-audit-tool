@@ -168,12 +168,10 @@ if __name__ == '__main__':
     print(f"Port: 5000")
     print("="*60)
     print("\nStarting server...")
-    
-app.run(
+
+    app.run(
         host='0.0.0.0',
         port=5000,
         debug=True,
         threaded=True
     )
-
-

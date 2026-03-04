@@ -1,4 +1,9 @@
 // Linux Security Audit Tool - Frontend Application
+
+// Chart configuration constants
+const SEVERITY_LABELS = ['Critical', 'High', 'Medium', 'Low'];
+const SEVERITY_COLORS = ['#DC2626', '#EA580C', '#D97706', '#0891B2'];
+
 class SecurityDashboard {
     constructor() {
         this.apiBase = 'http://localhost:5000';
@@ -7,6 +12,7 @@ class SecurityDashboard {
         this.activePolling = null;
         this.pollingInterval = 10000; // 10 seconds
         this.currentView = 'dashboard';
+        this.latestSeveritySummary = null;
         
         // Initialize
         this.init();
@@ -79,6 +85,7 @@ class SecurityDashboard {
         // Quick actions
         document.getElementById('startQuickScan').addEventListener('click', () => this.openScanModal('quick'));
         document.getElementById('startFullScan').addEventListener('click', () => this.openScanModal('full'));
+        document.getElementById('viewReports').addEventListener('click', () => this.switchView('reports'));
         document.getElementById('viewAllScans').addEventListener('click', () => this.switchView('scans'));
         document.getElementById('viewHistory').addEventListener('click', () => this.switchView('history'));
         
@@ -167,6 +174,13 @@ class SecurityDashboard {
             
             // Update stats
             this.updateStats();
+            
+            // Only fetch findings/severity when viewing the Reports tab or dashboard
+            // to avoid unnecessary backend work on every poll
+            if (this.currentView === 'dashboard' || this.currentView === 'reports') {
+                await this.updateTopFindings();
+                this.updateRiskOverview();
+            }
             
             // Update connection status
             this.updateConnectionStatus(true);
@@ -467,6 +481,123 @@ class SecurityDashboard {
         document.getElementById('completedScans').textContent = completedScans;
         document.getElementById('activeScans').textContent = activeScans;
         document.getElementById('failedScans').textContent = failedScans;
+    }
+
+    async updateTopFindings() {
+        const findingsContainer = document.getElementById('topFindings');
+        if (!findingsContainer) return;
+
+        findingsContainer.innerHTML = '<p class="text-muted">Loading latest findings...</p>';
+
+        const latestScan = this.history[0];
+        if (!latestScan || !latestScan.scan_id) {
+            findingsContainer.innerHTML = '<p class="text-muted">No completed scans available yet.</p>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBase}/api/scans/${latestScan.scan_id}/results`);
+            if (!response.ok) {
+                let errorMessage = `Failed to load findings (HTTP ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    // Don't include server message in error to avoid XSS
+                    if (errorData.message) {
+                        console.error('Server error:', errorData.message);
+                    }
+                } catch (jsonError) {
+                    // Ignore JSON parse errors
+                }
+                throw new Error(errorMessage);
+            }
+
+            const results = await response.json();
+            const parsedResults = results.parsed_results || {};
+            const findings = parsedResults.findings || {};
+            this.latestSeveritySummary = parsedResults.severity_summary || null;
+
+            const topFindings = [
+                ...(findings.critical || []),
+                ...(findings.high || []),
+                ...(findings.medium || []),
+                ...(findings.low || [])
+            ].slice(0, 8);
+
+            if (topFindings.length === 0) {
+                findingsContainer.innerHTML = '<p class="text-muted">No findings were detected in the latest scan.</p>';
+                return;
+            }
+
+            // Clear existing content and safely render findings without XSS
+            findingsContainer.innerHTML = '';
+
+            const allowedSeverities = ['critical', 'high', 'medium', 'low', 'info'];
+
+            topFindings.forEach(finding => {
+                const rawSeverity = (finding.severity || 'info').toLowerCase();
+                const severityClass = allowedSeverities.includes(rawSeverity) ? rawSeverity : 'info';
+
+                const findingItem = document.createElement('div');
+                findingItem.className = 'finding-item';
+
+                const severitySpan = document.createElement('span');
+                severitySpan.className = `finding-severity ${severityClass}`;
+                findingItem.appendChild(severitySpan);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'finding-content';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'finding-title';
+                titleDiv.textContent = rawSeverity.toUpperCase();
+
+                const descriptionDiv = document.createElement('div');
+                descriptionDiv.className = 'finding-description';
+                descriptionDiv.textContent = finding.message || 'No details available';
+
+                contentDiv.appendChild(titleDiv);
+                contentDiv.appendChild(descriptionDiv);
+                findingItem.appendChild(contentDiv);
+
+                findingsContainer.appendChild(findingItem);
+            });
+        } catch (error) {
+            console.error('Error updating top findings:', error);
+            // Use DOM manipulation for consistency with XSS prevention
+            findingsContainer.innerHTML = '';
+            const errorPara = document.createElement('p');
+            errorPara.className = 'text-muted';
+            errorPara.textContent = 'Unable to load findings summary.';
+            findingsContainer.appendChild(errorPara);
+        }
+    }
+
+    updateRiskOverview() {
+        const statusChart = Chart.getChart('statusChart');
+        if (!statusChart) return;
+
+        const severity = this.latestSeveritySummary || {};
+        const totals = {
+            critical: severity.critical || 0,
+            high: severity.high || 0,
+            medium: severity.medium || 0,
+            low: severity.low || 0
+        };
+
+        // Always update chart to avoid stale data, even if no findings
+        if ((totals.critical + totals.high + totals.medium + totals.low) === 0) {
+            // Explicitly reset chart to a "no findings" state
+            statusChart.data.labels = SEVERITY_LABELS;
+            statusChart.data.datasets[0].data = [0, 0, 0, 0];
+            statusChart.data.datasets[0].backgroundColor = SEVERITY_COLORS;
+            statusChart.update();
+            return;
+        }
+
+        statusChart.data.labels = SEVERITY_LABELS;
+        statusChart.data.datasets[0].data = [totals.critical, totals.high, totals.medium, totals.low];
+        statusChart.data.datasets[0].backgroundColor = SEVERITY_COLORS;
+        statusChart.update();
     }
     
     async startScan(scanType = 'quick', description = '') {
@@ -908,21 +1039,38 @@ class SecurityDashboard {
             'info': 'fas fa-info-circle'
         };
         
+        // Create toast structure safely without innerHTML
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <i class="${icons[type] || icons.info}"></i>
-            <div class="toast-content">
-                <div class="toast-title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close">&times;</button>
-        `;
+        
+        const icon = document.createElement('i');
+        icon.className = icons[type] || icons.info;
+        toast.appendChild(icon);
+        
+        const content = document.createElement('div');
+        content.className = 'toast-content';
+        
+        const title = document.createElement('div');
+        title.className = 'toast-title';
+        title.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        content.appendChild(title);
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'toast-message';
+        messageDiv.textContent = message; // Use textContent to prevent XSS
+        content.appendChild(messageDiv);
+        
+        toast.appendChild(content);
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close';
+        closeBtn.textContent = '×'; // Use textContent to prevent XSS
+        toast.appendChild(closeBtn);
         
         container.appendChild(toast);
         
         // Add close event
-        toast.querySelector('.toast-close').addEventListener('click', () => {
+        closeBtn.addEventListener('click', () => {
             toast.remove();
         });
         
@@ -1046,11 +1194,34 @@ class SecurityDashboard {
     async downloadPDFReport(scanId) {
         try {
             this.showToast('Generating PDF report...', 'info');
-            
-            // Download the PDF
+
             const url = `${this.apiBase}/api/scans/${scanId}/pdf`;
-            window.open(url, '_blank');
+            const response = await fetch(url);
+            if (!response.ok) {
+                // Log server error but don't expose it to avoid XSS
+                try {
+                    const errorData = await response.json();
+                    console.error('PDF generation error:', errorData.message);
+                } catch (jsonError) {
+                    // Ignore JSON parse errors
+                }
+                throw new Error(`Failed to generate PDF report (HTTP ${response.status})`);
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `security_audit_${scanId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
             
+            // Revoke the URL after a small delay to ensure download initiates
+            setTimeout(() => {
+                window.URL.revokeObjectURL(downloadUrl);
+            }, 100);
+
             this.showToast('PDF report generated successfully', 'success');
         } catch (error) {
             console.error('Error generating PDF report:', error);
