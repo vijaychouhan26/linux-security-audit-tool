@@ -169,8 +169,13 @@ class SecurityDashboard {
             
             // Update stats
             this.updateStats();
-            await this.updateTopFindings();
-            this.updateRiskOverview();
+            
+            // Only fetch findings/severity when viewing the Reports tab or dashboard
+            // to avoid unnecessary backend work on every poll
+            if (this.currentView === 'dashboard' || this.currentView === 'reports') {
+                await this.updateTopFindings();
+                this.updateRiskOverview();
+            }
             
             // Update connection status
             this.updateConnectionStatus(true);
@@ -491,9 +496,12 @@ class SecurityDashboard {
                 let errorMessage = `Failed to load findings (HTTP ${response.status})`;
                 try {
                     const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
+                    // Don't include server message in error to avoid XSS
+                    if (errorData.message) {
+                        console.error('Server error:', errorData.message);
+                    }
                 } catch (jsonError) {
-                    // Ignore JSON parse errors and use default message
+                    // Ignore JSON parse errors
                 }
                 throw new Error(errorMessage);
             }
@@ -515,18 +523,39 @@ class SecurityDashboard {
                 return;
             }
 
-            findingsContainer.innerHTML = topFindings.map(finding => {
-                const severity = (finding.severity || 'info').toLowerCase();
-                return `
-                    <div class="finding-item">
-                        <span class="finding-severity ${severity}"></span>
-                        <div class="finding-content">
-                            <div class="finding-title">${severity.toUpperCase()}</div>
-                            <div class="finding-description">${finding.message || 'No details available'}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            // Clear existing content and safely render findings without XSS
+            findingsContainer.innerHTML = '';
+
+            const allowedSeverities = ['critical', 'high', 'medium', 'low', 'info'];
+
+            topFindings.forEach(finding => {
+                const rawSeverity = (finding.severity || 'info').toLowerCase();
+                const severityClass = allowedSeverities.includes(rawSeverity) ? rawSeverity : 'info';
+
+                const findingItem = document.createElement('div');
+                findingItem.className = 'finding-item';
+
+                const severitySpan = document.createElement('span');
+                severitySpan.className = `finding-severity ${severityClass}`;
+                findingItem.appendChild(severitySpan);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'finding-content';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'finding-title';
+                titleDiv.textContent = rawSeverity.toUpperCase();
+
+                const descriptionDiv = document.createElement('div');
+                descriptionDiv.className = 'finding-description';
+                descriptionDiv.textContent = finding.message || 'No details available';
+
+                contentDiv.appendChild(titleDiv);
+                contentDiv.appendChild(descriptionDiv);
+                findingItem.appendChild(contentDiv);
+
+                findingsContainer.appendChild(findingItem);
+            });
         } catch (error) {
             console.error('Error updating top findings:', error);
             findingsContainer.innerHTML = '<p class="text-muted">Unable to load findings summary.</p>';
@@ -545,7 +574,13 @@ class SecurityDashboard {
             low: severity.low || 0
         };
 
+        // Always update chart to avoid stale data, even if no findings
         if ((totals.critical + totals.high + totals.medium + totals.low) === 0) {
+            // Explicitly reset chart to a "no findings" state
+            statusChart.data.labels = ['Critical', 'High', 'Medium', 'Low'];
+            statusChart.data.datasets[0].data = [0, 0, 0, 0];
+            statusChart.data.datasets[0].backgroundColor = ['#DC2626', '#EA580C', '#D97706', '#0891B2'];
+            statusChart.update();
             return;
         }
 
@@ -994,21 +1029,38 @@ class SecurityDashboard {
             'info': 'fas fa-info-circle'
         };
         
+        // Create toast structure safely without innerHTML
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <i class="${icons[type] || icons.info}"></i>
-            <div class="toast-content">
-                <div class="toast-title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close">&times;</button>
-        `;
+        
+        const icon = document.createElement('i');
+        icon.className = icons[type] || icons.info;
+        toast.appendChild(icon);
+        
+        const content = document.createElement('div');
+        content.className = 'toast-content';
+        
+        const title = document.createElement('div');
+        title.className = 'toast-title';
+        title.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        content.appendChild(title);
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'toast-message';
+        messageDiv.textContent = message; // Use textContent to prevent XSS
+        content.appendChild(messageDiv);
+        
+        toast.appendChild(content);
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close';
+        closeBtn.innerHTML = '&times;';
+        toast.appendChild(closeBtn);
         
         container.appendChild(toast);
         
         // Add close event
-        toast.querySelector('.toast-close').addEventListener('click', () => {
+        closeBtn.addEventListener('click', () => {
             toast.remove();
         });
         
@@ -1136,14 +1188,14 @@ class SecurityDashboard {
             const url = `${this.apiBase}/api/scans/${scanId}/pdf`;
             const response = await fetch(url);
             if (!response.ok) {
-                let errorMessage = `Failed to generate PDF report (HTTP ${response.status})`;
+                // Log server error but don't expose it to avoid XSS
                 try {
                     const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
+                    console.error('PDF generation error:', errorData.message);
                 } catch (jsonError) {
-                    // Ignore JSON parse errors and use default message
+                    // Ignore JSON parse errors
                 }
-                throw new Error(errorMessage);
+                throw new Error(`Failed to generate PDF report (HTTP ${response.status})`);
             }
 
             const blob = await response.blob();
@@ -1163,7 +1215,7 @@ class SecurityDashboard {
             this.showToast('PDF report generated successfully', 'success');
         } catch (error) {
             console.error('Error generating PDF report:', error);
-            this.showToast(`Failed to generate PDF report: ${error.message}`, 'error');
+            this.showToast('Failed to generate PDF report', 'error');
         }
     }
     

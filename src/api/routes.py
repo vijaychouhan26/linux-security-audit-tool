@@ -19,7 +19,8 @@ def _enrich_results_with_parsed_output(scan_id, results):
     if not results:
         return results
 
-    if results.get("parsed_results"):
+    # Use key-existence check to avoid reprocessing empty but existing parsed_results
+    if "parsed_results" in results and results["parsed_results"]:
         return results
 
     output_file = results.get("output_file")
@@ -228,13 +229,13 @@ def register_routes(app):
                             metadata_file = scan_dir / "metadata.json"
                             if metadata_file.exists():
                                 import json
-                                with open(metadata_file, 'r') as f:
+                                with open(metadata_file, 'r', encoding='utf-8') as f:
                                     metadata = json.load(f)
                                 
                                 # Load raw output
                                 output_file = scan_dir / "lynis_raw_output.txt"
                                 if output_file.exists():
-                                    with open(output_file, 'r') as f:
+                                    with open(output_file, 'r', encoding='utf-8') as f:
                                         raw_output = f.read()
                                     
                                     # Parse Lynis output for structured data
@@ -521,13 +522,13 @@ def register_routes(app):
                             metadata_file = scan_dir / "metadata.json"
                             if metadata_file.exists():
                                 import json
-                                with open(metadata_file, 'r') as f:
+                                with open(metadata_file, 'r', encoding='utf-8') as f:
                                     metadata = json.load(f)
                                 
                                 # Load raw output
                                 output_file = scan_dir / "lynis_raw_output.txt"
                                 if output_file.exists():
-                                    with open(output_file, 'r') as f:
+                                    with open(output_file, 'r', encoding='utf-8') as f:
                                         raw_output = f.read()
                                     
                                     # Parse Lynis output for structured data
