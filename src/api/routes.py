@@ -27,6 +27,10 @@ def _enrich_results_with_parsed_output(scan_id, results):
         return results
 
     output_path = Path(output_file)
+    # Resolve relative paths against project root
+    if not output_path.is_absolute():
+        project_root = Path(__file__).parent.parent.parent
+        output_path = project_root / output_path
     if not output_path.exists():
         return results
 
@@ -292,6 +296,7 @@ def register_routes(app):
             Raw text file or JSON error
         """
         try:
+            project_root = Path(__file__).parent.parent.parent
             # First check in-memory job
             job = scan_service.get_job(scan_id)
             output_file = None
@@ -299,9 +304,12 @@ def register_routes(app):
             if job and job.result:
                 output_path = job.result.get('output_file')
                 if output_path:
-                    output_file = Path(output_path)
+                    f_path = Path(output_path)
+                    if not f_path.is_absolute():
+                        f_path = project_root / f_path
+                    output_file = f_path
             
-            # If not found, check file system
+            # If not found, check file system (scans/completed/)
             if not output_file or not output_file.exists():
                 from src.utils.file_handler import FileHandler
                 file_handler = FileHandler(settings.SCANS_DIR)
@@ -310,11 +318,32 @@ def register_routes(app):
                 for scan in scans:
                     if scan.get('scan_id') == scan_id:
                         scan_dir = Path(scan.get('directory', ''))
-                        output_file = scan_dir / "lynis_raw_output.txt"
-                        if output_file.exists():
+                        for fname in ["lynis_raw_output.txt", "lynis_output.txt"]:
+                            candidate = scan_dir / fname
+                            if candidate.exists():
+                                output_file = candidate
+                                break
+                        if output_file and output_file.exists():
                             break
                         else:
                             output_file = None
+
+            # If still not found, check root scans/ directory (older scans)
+            if not output_file or not output_file.exists():
+                for scan_dir in settings.SCANS_DIR.iterdir():
+                    if not scan_dir.is_dir():
+                        continue
+                    if scan_dir.name in ("completed", "pending", "archived"):
+                        continue
+                    if scan_id not in scan_dir.name:
+                        continue
+                    for fname in ["lynis_raw_output.txt", "lynis_output.txt"]:
+                        candidate = scan_dir / fname
+                        if candidate.exists():
+                            output_file = candidate
+                            break
+                    if output_file and output_file.exists():
+                        break
             
             if not output_file or not output_file.exists():
                 return jsonify({
@@ -501,8 +530,45 @@ def register_routes(app):
         """
         try:
             from src.utils.pdf_generator import PDFReportGenerator
-            
-            # Get scan results
+            import json as _json
+
+            # Helper: resolve output file path (handles relative and absolute)
+            project_root = Path(__file__).parent.parent.parent
+
+            def _find_output_file(scan_dir: Path):
+                """Try both known output filenames; return file path or None."""
+                for name in ["lynis_raw_output.txt", "lynis_output.txt"]:
+                    candidate = scan_dir / name
+                    if candidate.exists():
+                        return candidate
+                return None
+
+            def _load_results_from_dir(scan_dir: Path):
+                """Load results dict from a scan directory."""
+                metadata_file = scan_dir / "metadata.json"
+                if not metadata_file.exists():
+                    return None
+                with open(metadata_file, 'r') as f:
+                    metadata = _json.load(f)
+                output_file = _find_output_file(scan_dir)
+                if not output_file:
+                    return None
+                with open(output_file, 'r') as f:
+                    raw_output = f.read()
+                parser = LynisParser()
+                parsed_data = parser.parse(raw_output)
+                formatted_data = parser.format_for_display(parsed_data)
+                return {
+                    "scan_id": scan_id,
+                    "status": "completed",
+                    "from_history": True,
+                    "metadata": metadata,
+                    "parsed_results": formatted_data,
+                    "completed_at": metadata.get('completed_at'),
+                    "timestamp": metadata.get('timestamp')
+                }
+
+            # Get scan results from in-memory jobs first
             results = scan_service.get_job_result(scan_id)
             
             if not results:
@@ -510,43 +576,54 @@ def register_routes(app):
                 from src.utils.file_handler import FileHandler
                 file_handler = FileHandler(settings.SCANS_DIR)
                 
-                # Look for scan in completed directory
+                # 1) Look in scans/completed/
                 scans = file_handler.get_scan_list("completed")
                 for scan in scans:
                     if scan.get('scan_id') == scan_id:
-                        # Found in file system, load full results
                         scan_dir = Path(scan.get('directory', ''))
                         if scan_dir.exists():
-                            # Load metadata
-                            metadata_file = scan_dir / "metadata.json"
-                            if metadata_file.exists():
-                                import json
-                                with open(metadata_file, 'r') as f:
-                                    metadata = json.load(f)
-                                
-                                # Load raw output
-                                output_file = scan_dir / "lynis_raw_output.txt"
-                                if output_file.exists():
-                                    with open(output_file, 'r') as f:
-                                        raw_output = f.read()
-                                    
-                                    # Parse Lynis output for structured data
-                                    parser = LynisParser()
-                                    parsed_data = parser.parse(raw_output)
-                                    formatted_data = parser.format_for_display(parsed_data)
-                                    
-                                    # Create results structure
-                                    results = {
-                                        "scan_id": scan_id,
-                                        "status": "completed",
-                                        "from_history": True,
-                                        "metadata": metadata,
-                                        "parsed_results": formatted_data,
-                                        "completed_at": metadata.get('completed_at'),
-                                        "timestamp": metadata.get('timestamp')
-                                    }
-                                    break
-            
+                            results = _load_results_from_dir(scan_dir)
+                            if results:
+                                break
+
+            if not results:
+                # 2) Look in root scans/ directory (older scans not in completed/)
+                for scan_dir in settings.SCANS_DIR.iterdir():
+                    if not scan_dir.is_dir():
+                        continue
+                    if scan_dir.name in ("completed", "pending", "archived"):
+                        continue
+                    # Directory name format: <timestamp>_<scan_id>
+                    if scan_id not in scan_dir.name:
+                        continue
+                    results = _load_results_from_dir(scan_dir)
+                    if results:
+                        break
+
+            if not results:
+                # 3) Try resolving via in-memory result's output_file (relative path fix)
+                job = scan_service.get_job(scan_id)
+                if job and job.result:
+                    output_file_path = job.result.get('output_file')
+                    if output_file_path:
+                        # Resolve relative paths against project root
+                        output_path = Path(output_file_path)
+                        if not output_path.is_absolute():
+                            output_path = project_root / output_path
+                        if output_path.exists():
+                            with open(output_path, 'r') as f:
+                                raw_output = f.read()
+                            parser = LynisParser()
+                            parsed_data = parser.parse(raw_output)
+                            formatted_data = parser.format_for_display(parsed_data)
+                            results = {
+                                "scan_id": scan_id,
+                                "status": "completed",
+                                "parsed_results": formatted_data,
+                                "completed_at": job.result.get('completed_at'),
+                                "timestamp": job.result.get('timestamp')
+                            }
+
             if not results:
                 return jsonify({
                     "error": "Not Found",

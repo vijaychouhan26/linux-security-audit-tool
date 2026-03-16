@@ -3,26 +3,33 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.venv/
+venv/
 
 # Virtual Environment
-venv/
 .env
 
 # Logs
 *.log
 logs/
 
-# Generated reports
+# Generated reports and data
 backend/generated/
 *.pdf
+scans/*
+!scans/.gitkeep
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Lynis raw data (optional – keep only if you want)
-backend/data/*.dat
-scans/*/lynis_output.txt
+# Temporary and summary files
+FINAL_SUMMARY.txt
+IMPLEMENTATION_COMPLETE.md
+FEATURE_DEMONSTRATION.md
+PDF_SAMPLE_INFO.txt
+prompt.txt
+get-pip.py
 
 # Pytest cache
 .pytest_cache/

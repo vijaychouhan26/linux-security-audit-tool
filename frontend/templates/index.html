@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="icon" type="image/x-icon" href="https://img.icons8.com/color/96/000000/linux.png">
 </head>
+
 <body>
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
@@ -21,6 +23,9 @@
 
     <!-- Main Container -->
     <div class="container">
+        <!-- Sidebar Overlay (closes sidebar on click) -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-header">
@@ -28,9 +33,17 @@
                     <i class="fas fa-shield-alt"></i>
                     <h1>Lynis<span>Audit</span></h1>
                 </div>
-                <div class="system-status">
-                    <div class="status-indicator active" id="systemStatus"></div>
-                    <span>System Online</span>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div class="system-status">
+                        <div class="status-indicator active" id="systemStatus"></div>
+                        <span>System Online</span>
+                    </div>
+                    <button id="sidebarCloseBtn" title="Close menu"
+                        style="background:none;border:none;color:rgba(255,255,255,0.6);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;transition:all 0.2s"
+                        onmouseover="this.style.color='white';this.style.background='rgba(255,255,255,0.1)'"
+                        onmouseout="this.style.color='rgba(255,255,255,0.6)';this.style.background='none'">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             </div>
 
@@ -39,13 +52,13 @@
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="menu-item" data-view="scans">
-                    <i class="fas fa-search"></i>
-                    <span>Security Scans</span>
-                </a>
                 <a href="#" class="menu-item" data-view="history">
                     <i class="fas fa-history"></i>
                     <span>Scan History</span>
+                </a>
+                <a href="#" class="menu-item" data-view="analysis">
+                    <i class="fas fa-microscope"></i>
+                    <span>Analysis</span>
                 </a>
                 <a href="#" class="menu-item" data-view="reports">
                     <i class="fas fa-chart-bar"></i>
@@ -185,9 +198,9 @@
                                     <tr>
                                         <th>Scan ID</th>
                                         <th>Status</th>
-                                        <th>Progress</th>
-                                        <th>Started</th>
-                                        <th>Duration</th>
+                                        <th>Score</th>
+                                        <th>Findings</th>
+                                        <th>Date</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -236,45 +249,6 @@
                     </div>
                 </div>
 
-                <!-- Scans View -->
-                <div id="scansView" class="view">
-                    <div class="view-header">
-                        <h1><i class="fas fa-search"></i> Security Scans</h1>
-                        <p>Manage and monitor security scans</p>
-                    </div>
-                    
-                    <div class="section">
-                        <div class="section-header">
-                            <h2>Scan Controls</h2>
-                            <div class="btn-group">
-                                <button class="btn-primary" id="startNewScan">
-                                    <i class="fas fa-plus"></i> New Scan
-                                </button>
-                                <button class="btn-secondary" id="refreshScans">
-                                    <i class="fas fa-sync"></i> Refresh
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="table-container">
-                            <table class="data-table" id="allScansTable">
-                                <thead>
-                                    <tr>
-                                        <th>Scan ID</th>
-                                        <th>Status</th>
-                                        <th>Progress</th>
-                                        <th>Started</th>
-                                        <th>Duration</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="allScansBody">
-                                    <!-- All scans will be inserted here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- History View -->
                 <div id="historyView" class="view">
@@ -282,12 +256,13 @@
                         <h1><i class="fas fa-history"></i> Scan History</h1>
                         <p>View completed security scans</p>
                     </div>
-                    
+
                     <div class="section">
                         <div class="section-header">
                             <h2>Completed Scans</h2>
                             <div class="filters">
-                                <input type="text" id="historySearch" placeholder="Search scans..." class="search-input">
+                                <input type="text" id="historySearch" placeholder="Search scans..."
+                                    class="search-input">
                                 <select id="historyFilter" class="select-input">
                                     <option value="all">All Scans</option>
                                     <option value="today">Today</option>
@@ -296,7 +271,7 @@
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div class="table-container">
                             <table class="data-table" id="historyTable">
                                 <thead>
@@ -317,13 +292,115 @@
                     </div>
                 </div>
 
+                <!-- Analysis View -->
+                <div id="analysisView" class="view">
+                    <div class="view-header">
+                        <h1><i class="fas fa-microscope"></i> Security Analysis</h1>
+                        <p>Deep-dive into scan findings by severity level</p>
+                    </div>
+
+                    <!-- Scan Selector -->
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Select Scan to Analyse</h2>
+                            <div class="btn-group">
+                                <select id="analysisScanSelect" class="select-input" style="min-width:260px">
+                                    <option value="">-- Choose a completed scan --</option>
+                                </select>
+                                <button class="btn-primary" id="loadAnalysisBtn">
+                                    <i class="fas fa-search"></i> Load Analysis
+                                </button>
+                                <button class="btn-secondary" id="downloadAnalysisPdfBtn" style="display:none">
+                                    <i class="fas fa-file-pdf"></i> Download PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loading state -->
+                    <div id="analysisLoading" style="display:none; text-align:center; padding:40px">
+                        <i class="fas fa-spinner fa-spin" style="font-size:32px; color:var(--color-primary)"></i>
+                        <p style="margin-top:12px; color:var(--color-text-secondary)">Analysing scan output...</p>
+                    </div>
+
+                    <!-- Results panel -->
+                    <div id="analysisResults" style="display:none">
+
+                        <!-- Summary cards -->
+                        <div class="section">
+                            <div class="section-header">
+                                <h2>Security Overview</h2>
+                            </div>
+                            <div class="analysis-summary-grid">
+                                <div class="analysis-score-card" id="analysiHardeningCard">
+                                    <div class="score-number" id="analysisHardeningIndex">--</div>
+                                    <div class="score-label">Hardening Index</div>
+                                    <div class="score-sub" id="analysisHardeningLabel">--</div>
+                                </div>
+                                <div class="sev-summary-card critical"
+                                    onclick="dashboard.scrollToSection('critical-section')">
+                                    <div class="sev-count" id="anaCountCritical">0</div>
+                                    <div class="sev-name"><i class="fas fa-skull-crossbones"></i> CRITICAL</div>
+                                </div>
+                                <div class="sev-summary-card high" onclick="dashboard.scrollToSection('high-section')">
+                                    <div class="sev-count" id="anaCountHigh">0</div>
+                                    <div class="sev-name"><i class="fas fa-exclamation-triangle"></i> HIGH</div>
+                                </div>
+                                <div class="sev-summary-card medium"
+                                    onclick="dashboard.scrollToSection('medium-section')">
+                                    <div class="sev-count" id="anaCountMedium">0</div>
+                                    <div class="sev-name"><i class="fas fa-exclamation-circle"></i> MEDIUM</div>
+                                </div>
+                                <div class="sev-summary-card low" onclick="dashboard.scrollToSection('low-section')">
+                                    <div class="sev-count" id="anaCountLow">0</div>
+                                    <div class="sev-name"><i class="fas fa-info-circle"></i> LOW</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Finding sections per severity -->
+                        <div id="analysis-critical-section" class="analysis-section">
+                            <div class="analysis-section-header critical">
+                                <span><i class="fas fa-skull-crossbones"></i> CRITICAL Findings</span>
+                                <span class="sev-badge-count" id="anaSectionCountCritical">0</span>
+                            </div>
+                            <div class="analysis-findings-list" id="anaFindingsCritical"></div>
+                        </div>
+
+                        <div id="analysis-high-section" class="analysis-section">
+                            <div class="analysis-section-header high">
+                                <span><i class="fas fa-exclamation-triangle"></i> HIGH Priority Findings</span>
+                                <span class="sev-badge-count" id="anaSectionCountHigh">0</span>
+                            </div>
+                            <div class="analysis-findings-list" id="anaFindingsHigh"></div>
+                        </div>
+
+                        <div id="analysis-medium-section" class="analysis-section">
+                            <div class="analysis-section-header medium">
+                                <span><i class="fas fa-exclamation-circle"></i> MEDIUM Priority Findings</span>
+                                <span class="sev-badge-count" id="anaSectionCountMedium">0</span>
+                            </div>
+                            <div class="analysis-findings-list" id="anaFindingsMedium"></div>
+                        </div>
+
+                        <div id="analysis-low-section" class="analysis-section">
+                            <div class="analysis-section-header low">
+                                <span><i class="fas fa-info-circle"></i> LOW Priority Findings</span>
+                                <span class="sev-badge-count" id="anaSectionCountLow">0</span>
+                            </div>
+                            <div class="analysis-findings-list" id="anaFindingsLow"></div>
+                        </div>
+
+                    </div><!-- /analysisResults -->
+                </div><!-- /analysisView -->
+
                 <!-- Reports View -->
                 <div id="reportsView" class="view">
                     <div class="view-header">
                         <h1><i class="fas fa-chart-bar"></i> Reports</h1>
                         <p>Security analysis and reports</p>
                     </div>
-                    
+
                     <div class="section">
                         <div class="section-header">
                             <h2>Security Overview</h2>
@@ -331,7 +408,48 @@
                                 <i class="fas fa-file-pdf"></i> Generate PDF Report
                             </button>
                         </div>
-                        
+
+                        <!-- Score + severity summary (populated by JS) -->
+                        <div id="reportScoreBanner" style="display:none;margin-bottom:20px">
+                            <div
+                                style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:18px 20px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;backdrop-filter:blur(10px)">
+                                <!-- Score circle -->
+                                <div style="text-align:center;min-width:90px">
+                                    <div id="reportHardeningScore" style="font-size:36px;font-weight:800;line-height:1">
+                                        --</div>
+                                    <div
+                                        style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px">
+                                        Hardening Score</div>
+                                    <div id="reportHardeningLabel"
+                                        style="font-size:12px;font-weight:600;margin-top:4px">--</div>
+                                </div>
+                                <div style="width:1px;height:60px;background:var(--color-border);flex-shrink:0"></div>
+                                <!-- Severity pills -->
+                                <div style="display:flex;gap:12px;flex-wrap:wrap;flex:1">
+                                    <div class="sev-pill critical">
+                                        <span id="reportCriticalCount">0</span>
+                                        <small>Critical</small>
+                                    </div>
+                                    <div class="sev-pill high">
+                                        <span id="reportHighCount">0</span>
+                                        <small>High</small>
+                                    </div>
+                                    <div class="sev-pill medium">
+                                        <span id="reportMediumCount">0</span>
+                                        <small>Medium</small>
+                                    </div>
+                                    <div class="sev-pill low">
+                                        <span id="reportLowCount">0</span>
+                                        <small>Low</small>
+                                    </div>
+                                </div>
+                                <button class="btn-secondary" onclick="dashboard.switchView('analysis')"
+                                    style="flex-shrink:0">
+                                    <i class="fas fa-microscope"></i> Full Analysis
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="charts-grid">
                             <div class="chart-card">
                                 <div class="chart-header">
@@ -350,7 +468,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="section">
                             <h3>Top Security Findings</h3>
                             <div class="findings-list" id="topFindings">
@@ -366,7 +484,7 @@
                         <h1><i class="fas fa-cog"></i> Settings</h1>
                         <p>Configure the audit tool</p>
                     </div>
-                    
+
                     <div class="settings-grid">
                         <div class="settings-card">
                             <h3><i class="fas fa-server"></i> System Configuration</h3>
@@ -382,7 +500,7 @@
                                 <i class="fas fa-save"></i> Save Configuration
                             </button>
                         </div>
-                        
+
                         <div class="settings-card">
                             <h3><i class="fas fa-bell"></i> Notifications</h3>
                             <div class="form-group">
@@ -398,7 +516,7 @@
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="settings-card">
                             <h3><i class="fas fa-palette"></i> Appearance</h3>
                             <div class="form-group">
@@ -411,7 +529,8 @@
                             </div>
                             <div class="form-group">
                                 <label>Refresh Interval (seconds)</label>
-                                <input type="number" id="refreshInterval" value="10" min="5" max="60" class="form-control">
+                                <input type="number" id="refreshInterval" value="10" min="5" max="60"
+                                    class="form-control">
                             </div>
                         </div>
                     </div>
@@ -464,7 +583,8 @@
                 </div>
                 <div class="form-group">
                     <label for="scanDescription">Scan Description (Optional)</label>
-                    <input type="text" id="scanDescription" placeholder="e.g., Weekly security audit" class="form-control">
+                    <input type="text" id="scanDescription" placeholder="e.g., Weekly security audit"
+                        class="form-control">
                 </div>
             </div>
             <div class="modal-footer">
@@ -488,6 +608,39 @@
         </div>
     </div>
 
+    <!-- System Info Modal -->
+    <div id="systemInfoModal" class="modal">
+        <div class="modal-content" style="max-width:680px">
+            <div class="modal-header">
+                <h2><i class="fas fa-server"></i> System Information</h2>
+                <button class="modal-close"
+                    onclick="document.getElementById('systemInfoModal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="modal-body" id="systemInfoModalBody">
+                <div style="text-align:center;padding:40px;color:var(--color-text-secondary)">
+                    <i class="fas fa-spinner fa-spin" style="font-size:32px;margin-bottom:12px"></i>
+                    <p>Loading system information...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Explain Modal -->
+    <div id="aiExplainModal" class="modal">
+        <div class="modal-content" style="max-width:680px">
+            <div class="modal-header">
+                <h2><i class="fas fa-robot" style="color:var(--color-primary)"></i> AI Security Advisor</h2>
+                <button class="modal-close"
+                    onclick="document.getElementById('aiExplainModal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="modal-body" id="aiExplainContent">
+                <p style="color:var(--color-text-secondary);text-align:center;padding:20px">
+                    <i class="fas fa-spinner fa-spin"></i> Consulting AI advisor...
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications -->
     <div id="toastContainer"></div>
 
@@ -495,4 +648,5 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
+
 </html>
