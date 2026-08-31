@@ -1,123 +1,149 @@
-# Linux Security Audit and Hardening System using Lynis
+# Linux Security Audit & Hardening System
 
-This project focuses on auditing Linux systems for security misconfigurations and helping users understand how to harden their systems using industry best practices.
+> Automated Linux security auditing, risk classification, reporting, and REST-based access using Lynis, Python, Flask, and ReportLab.
 
-## Overview
-Linux systems are widely used in servers and cloud environments, but many are deployed with insecure default configurations. This project uses Lynis as the core audit engine and builds a structured system around it to make audit results more understandable and actionable.
+## About the Project
 
-## Features
-- **Local Linux system security audit** using Lynis
-- **Human-readable dashboard** with severity indicators (Critical, High, Medium, Low)
-- **Automated severity classification** of security findings
-- **PDF report generation** with professional formatting for non-technical users
-- **RESTful API** for programmatic access
-- **Real-time scan monitoring** and progress tracking
-- **Scan history** with persistent storage
-- **Interactive web dashboard** with dark mode
+This project turns raw Lynis security-audit output into a structured workflow for reviewing Linux security posture and prioritizing remediation.
 
-## New Features (Latest Update)
-✨ **Human-Readable Output**: Scan results are now categorized by severity (Critical, High, Medium, Low) for easy understanding
+The system is designed around practical security operations: run an audit, collect findings, classify risk, expose results through an API, retain scan history, and generate a professional report.
 
-✨ **PDF Report Downloads**: Generate professional PDF reports with human-readable summaries instead of raw Lynis output
+## What It Does
 
-✨ **Severity Dashboard**: Visual indicators show the impact level of security findings at a glance
+- Runs local Linux security audits using **Lynis**
+- Classifies findings into **Critical / High / Medium / Low** severity levels
+- Presents findings through a human-readable web dashboard
+- Generates professional **PDF security reports**
+- Exposes audit operations through a **Flask REST API**
+- Tracks scan status and history
+- Provides system/service health information
+- Helps prioritize remediation instead of presenting only raw scanner output
 
-✨ **Risk Assessment**: Automatic risk classification helps prioritize remediation efforts
+## Architecture
 
-## Technologies Used
-- Python 3.8+
-- Lynis (security audit engine)
-- Flask (REST API)
-- ReportLab (PDF generation)
-- HTML/CSS/JavaScript (Web Dashboard)
+```text
+Linux Host
+   |
+   v
+Lynis Security Audit
+   |
+   v
+Python Processing / Severity Classification
+   |
+   +----> REST API (Flask)
+   |
+   +----> Web Dashboard
+   |
+   +----> PDF Reporting (ReportLab)
+   |
+   v
+Security Findings / Remediation Priorities
+```
 
-## Current Features
-- Local system auditing
-- Severity classification (Critical/High/Medium/Low)
-- Human-readable reports and PDF exports
-- Web-based dashboard with real-time updates
-- Persistent scan history
+## Technologies
 
-## Prerequisites
+- **Linux:** Ubuntu / Debian / Kali-compatible workflow
+- **Security:** Lynis
+- **Backend:** Python, Flask
+- **Reporting:** ReportLab
+- **Web:** HTML / CSS / JavaScript
+- **API:** REST / JSON
+- **Version Control:** Git / GitHub
 
-1. **Linux System**: This tool is designed for Linux only
-2. **Python 3.8+**: `python3 --version`
-3. **Lynis Installed**: `sudo apt install lynis` (or equivalent for your distribution)
-4. **Sudo Access**: For full system audit capabilities
+## Security & Troubleshooting Skills Demonstrated
+
+This project also reflects practical skills relevant to technical support and infrastructure troubleshooting:
+
+- Linux command-line investigation
+- Service and system-status checks
+- Log and audit-output analysis
+- Root-cause-oriented troubleshooting
+- HTTP/REST API request-response handling
+- Structured issue documentation
+- Risk prioritization and remediation tracking
 
 ## Installation
 
+### Prerequisites
+
+- Linux system
+- Python 3.8+
+- Lynis
+- sudo access for full audit coverage
+
+### Debian / Ubuntu / Kali
+
 ```bash
-# Clone or copy the project
-cd linux-security-audit-tool
+sudo apt update
+sudo apt install lynis python3 python3-pip -y
+```
 
-# Install Python dependencies
+### Python dependencies
+
+```bash
 pip install -r requirements.txt
-
-# Ensure Lynis is installed
-sudo apt install lynis -y  # Ubuntu/Debian
-# or
-sudo yum install lynis -y  # RHEL/CentOS
 ```
 
 ## Usage
 
-### Starting the Dashboard
+Start the API:
 
 ```bash
-# Start the API server (Terminal 1)
 python3 run_api.py
-
-# Start the dashboard (Terminal 2)
-python3 frontend/dashboard.py
-
-# Access the dashboard
-# Open browser to http://localhost:8080
 ```
 
-### Running a Security Scan
+Then start the dashboard using the project entry point available in your checkout.
 
-**Via Dashboard:**
-1. Open http://localhost:8080 in your browser
-2. Click "Quick Scan" or "Full Scan"
-3. View results with severity indicators
-4. Download PDF report
+Example API workflow:
 
-**Via API:**
 ```bash
+# Health check
+curl http://localhost:5000/health
+
 # Start a scan
 curl -X POST http://localhost:5000/api/scans
 
-# Check scan status
-curl http://localhost:5000/api/scans/<scan_id>
+# List scans
+curl http://localhost:5000/api/scans
 
-# Get results
+# Read scan results
 curl http://localhost:5000/api/scans/<scan_id>/results
 
-# Download PDF report
+# Download a generated report
 curl http://localhost:5000/api/scans/<scan_id>/pdf -o report.pdf
 ```
 
-### Understanding Severity Levels
+## API Overview
 
-- **CRITICAL** 🔴: Immediate action required (e.g., root password issues, disabled security modules)
-- **HIGH** 🟠: Should be addressed soon (e.g., firewall disabled, weak encryption)
-- **MEDIUM** 🟡: Plan for remediation (e.g., configuration improvements, missing updates)
-- **LOW** 🔵: Best practice recommendations (e.g., optional optimizations)
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/scans` | Start a scan |
+| `GET /api/scans` | List scans |
+| `GET /api/scans/<scan_id>` | Scan status |
+| `GET /api/scans/<scan_id>/results` | Classified findings |
+| `GET /api/scans/<scan_id>/raw` | Raw Lynis output |
+| `GET /api/scans/<scan_id>/pdf` | PDF report |
+| `DELETE /api/scans/<scan_id>` | Cancel a scan |
+| `GET /api/history` | Scan history |
+| `GET /api/system/status` | System/service status |
+| `GET /health` | Service health |
 
-## API Endpoints
+## Severity Model
 
-### Scan Management
-- `POST /api/scans` - Start a new scan
-- `GET /api/scans` - List all scans/jobs
-- `GET /api/scans/<scan_id>` - Get scan status
-- `GET /api/scans/<scan_id>/results` - Get scan results with severity classification
-- `GET /api/scans/<scan_id>/raw` - Get raw Lynis output
-- `GET /api/scans/<scan_id>/pdf` - Download PDF report (**NEW**)
-- `DELETE /api/scans/<scan_id>` - Cancel a running scan
+- **Critical** — immediate attention required
+- **High** — high-priority remediation
+- **Medium** — remediation should be planned
+- **Low** — best-practice or lower-impact improvement
 
-### System Information
-- `GET /api/history` - Get scan history from file system
-- `GET /api/system/status` - Get system and service status
-- `GET /health` - Health check endpoint
-- `GET /api` - API documentation
+## Documentation
+
+- [Authorized VAPT Reconnaissance Assessment](docs/authorized-vapt-reconnaissance-assessment.md)
+
+## Author
+
+**Vijay Chouhan**  
+B.Tech Computer Science — Cybersecurity Specialization  
+Cybersecurity | VAPT | Linux | Networking | Web Security
+
+GitHub: https://github.com/vijaychouhan26
+LinkedIn: https://linkedin.com/in/vijay-chouhan-1130632b7
